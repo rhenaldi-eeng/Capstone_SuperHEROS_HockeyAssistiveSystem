@@ -1,0 +1,125 @@
+/*
+  Rui Santos
+  Complete project details at https://RandomNerdTutorials.com/esp-now-esp32-arduino-ide/
+ 
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files.
+ 
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+*/
+
+#include <esp_now.h> // Initalize EPS NOW Protocol 
+#include <WiFi.h> // Initialize wifi 
+#include <Adafruit_NeoPixel.h> // Initalize Built in LED use 
+Adafruit_NeoPixel pixel(1, 48, NEO_GRB + NEO_KHZ800); //LED-COUNT = 1, LED_PIN = 48
+
+//MAC Addresses that it communicates with 
+uint8_t AidAddress[] = {0x30, 0xED, 0xA0, 0xA8, 0xB8, 0xF8};
+uint8_t UserAddress[] = {0x98, 0x88, 0xE0, 0x14, 0xBD, 0x0C};
+
+// Structure example to receive data = MUST MATCH THE SENDER STRUCTURE
+typedef struct struct_message {
+  int id;
+  int b; 
+} struct_message;
+
+// All struct_message handled by microcontroller are defined here 
+struct_message ShootData; // Recieves Data
+struct_message LatchData ; // Sending Data
+
+esp_now_peer_info_t peerInfo;
+
+// callback when data is sent
+void OnDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status){
+}// callback when data is sent
+
+// callback function that will be executed when data is received
+void OnDataRecv(const esp_now_recv_info_t *recv_info, const uint8_t *incomingData, int len) {
+  memcpy(&ShootData, incomingData, sizeof(ShootData));
+// Only recevies shoot data so it sets it tp that variable 
+}
+ 
+void setup() {
+  // Initialize Serial Monitor
+  Serial.begin(115200); 
+  // Set device as a Wi-Fi Station
+  WiFi.mode(WIFI_STA);
+ // Init ESP-NOW
+  if (esp_now_init() != ESP_OK) { //will be sed to trouble shoot, but no external indicator will happen in system  
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+  // Once ESPNow is successfully Init, we will register for Send CB to get the status of Transmitted packet
+  esp_now_register_send_cb(OnDataSent);
+
+  // Once ESPNow is successfully Init, we will register for recv CB to  get recv packer info
+  esp_now_register_recv_cb(OnDataRecv);
+
+// Register peer (Aid controller )
+  memcpy(peerInfo.peer_addr, AidAddress, 6);
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;// data is not encrypted 
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Failed to add peer");
+    return;
+  }
+  esp_now_peer_info_t peerInfo = {};
+
+  memcpy(peerInfo.peer_addr, UserAddress, 6); // Register Peer (User controller)
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;// data is not encrypted 
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Failed to add peer");
+    return;
+  }
+
+  pinMode(18, OUTPUT); // Latch Power Pin
+  digitalWrite(18, HIGH); // Power high 
+  pinMode(7, INPUT); // Sets up Latch Pin 
+
+  pixel.begin();
+  pixel.show(); // Turn off LED initially
+
+}
+ 
+void loop() {
+ // Set values to send
+// ADD Latch compound statement regarding status of solenoid
+
+
+  LatchData.id = 3;
+  LatchData.b = 0;
+
+  if ((ShootData.b == 1) && (LatchData.b == 0)) { // If button is pressed from either system and latch is ready, shot is fired (right not it rep with blue LED)
+    pixel.setPixelColor(0, pixel.Color(0, 0, 255)); // Shot has taken place 
+    pixel.show();
+    delay(200);
+    pixel.setPixelColor(0, pixel.Color(0, 0, 0)); // Shot has taken place  
+    delay(200);
+    pixel.show();
+}
+
+
+
+  // Send message via ESP-NOW
+  esp_err_t result = esp_now_send(AidAddress, (uint8_t *) &LatchData, sizeof(LatchData));
+  esp_err_t result2 = esp_now_send(UserAddress, (uint8_t *) &LatchData, sizeof(LatchData));
+if (result == ESP_OK) {
+    Serial.println("Sent with success");
+ }
+  else {
+    Serial.println("Error sending the data");}
+   
+  if (result2 == ESP_OK) {
+    Serial.println("Sent with success"); }
+ 
+  else {
+    Serial.println("Error sending the data");
+}
+//delay(200);
+Serial.println(ShootData.b);
+
+delay(10);
+
+}
