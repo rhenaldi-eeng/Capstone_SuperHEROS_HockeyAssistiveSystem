@@ -1,0 +1,50 @@
+#include <AccelStepper.h>
+#include <MultiStepper.h>
+
+int PUL1 = 5;// ESP 32= 5 and ARDUINO =6
+int PUL2 = 7;// ESP32 = 7  and Arduino = 8
+int DIR1 = 16;// ESP32 = 16  and Arduino = 7
+int DIR2 = 18;// ESP 32 = 18 and Arduino = 9
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(PUL1, OUTPUT);
+  pinMode(DIR1, OUTPUT);
+  pinMode(PUL2, OUTPUT);
+  pinMode(DIR2, OUTPUT);
+  digitalWrite(PUL1, LOW);
+  digitalWrite(PUL2, LOW);
+
+}
+
+//300 microseconds delay is ~500 RPM
+void loop() {
+  Serial.println(analogRead(3));
+
+  while (analogRead(3) < 200){ //Tested 750 microsecond delay on full step optimal noise
+    digitalWrite(DIR1, LOW);
+    digitalWrite(DIR2, HIGH);
+
+    digitalWrite(PUL1, HIGH);
+    digitalWrite(PUL2, HIGH);
+    delayMicroseconds(750);
+    digitalWrite(PUL1, LOW);
+    digitalWrite(PUL2, LOW);
+    delayMicroseconds(750);
+
+  }
+  
+  while (analogRead(3) > 700){
+    digitalWrite(DIR1, HIGH);
+    digitalWrite(DIR2, LOW);
+
+    digitalWrite(PUL1, HIGH);
+    digitalWrite(PUL2, HIGH);
+    delayMicroseconds(750);
+    digitalWrite(PUL1, LOW);
+    digitalWrite(PUL2, LOW);
+    delayMicroseconds(750);
+
+  }
+  
+}
