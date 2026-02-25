@@ -1,0 +1,50 @@
+#include <AccelStepper.h>
+#include <MultiStepper.h>
+
+int PUL1 = 5;// ESP 32= 5 and ARDUINO =6 
+int PUL2 = 36;// ESP32 = 17 and Arduino = 8 
+int DIR1 = 16;// ESP32 = 16 and Arduino = 7 
+int DIR2 = 35;// ESP 32 = 18 and Arduino = 9
+
+#define POT_PIN 1
+#define POWER_PIN 4
+
+void setup (){
+  Serial.begin(115200);
+  pinMode(PUL1, OUTPUT); 
+  pinMode(DIR1, OUTPUT); 
+  pinMode(PUL2, OUTPUT);
+  pinMode(DIR2, OUTPUT); 
+  pinMode(POT_PIN, INPUT); 
+  pinMode(POWER_PIN, OUTPUT);
+
+  digitalWrite(PUL1, LOW); 
+  digitalWrite(PUL2, LOW); 
+  digitalWrite(POWER_PIN, HIGH);
+}
+void loop(){
+  while (analogRead(POT_PIN) < 1200){ //Tested 750 microsecond delay on full step optimal noise 
+    digitalWrite(DIR1, LOW); 
+    digitalWrite(DIR2, HIGH);
+
+    digitalWrite(PUL1, HIGH); 
+    digitalWrite(PUL2, HIGH); 
+    delayMicroseconds(750); 
+    digitalWrite(PUL1, LOW); 
+    digitalWrite(PUL2, LOW); 
+    delayMicroseconds(750);
+    Serial.println(analogRead(POT_PIN));
+  }
+  while (analogRead(POT_PIN) > 2200){ //Tested 750 microsecond delay on full step optimal noise 
+    digitalWrite(DIR1, HIGH); 
+    digitalWrite(DIR2, LOW);
+
+    digitalWrite(PUL1, HIGH); 
+    digitalWrite(PUL2, HIGH); 
+    delayMicroseconds(750); 
+    digitalWrite(PUL1, LOW); 
+    digitalWrite(PUL2, LOW); 
+    delayMicroseconds(750);
+    Serial.println(analogRead(POT_PIN));
+      }
+}
