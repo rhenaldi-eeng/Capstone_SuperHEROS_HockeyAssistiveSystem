@@ -10,7 +10,7 @@
 #include <esp_now.h> // Initalize EPS NOW Protocol 
 #include <WiFi.h> // Initialize wifi 
 #include <Adafruit_NeoPixel.h> // Initalize Built in LED use 
-#define BUTTON_PIN  7
+#define BUTTON_PIN  5
 
  Adafruit_NeoPixel pixel(1, 48, NEO_GRB + NEO_KHZ800); //LED-COUNT = 1, LED_PIN = 48, Initalize Built in ESP LED
 
