@@ -1,0 +1,161 @@
+#include <esp_now.h>
+#include <WiFi.h>
+#include <Adafruit_NeoPixel.h>
+
+Adafruit_NeoPixel pixel(1, 48, NEO_GRB + NEO_KHZ800);
+
+// ---------------- Pins ----------------
+
+#define BUTTON_PIN 7
+#define SWITCH_PIN 5
+
+// ---------------- MAC Addresses ----------------
+
+uint8_t ShootAddress[] = {0x30, 0xED, 0xA0, 0xB7, 0x59, 0x9C};
+uint8_t UserAddress[]  = {0x98, 0x88, 0xE0, 0x14, 0xBD, 0x0C};
+
+// ---------------- Message Structure ----------------
+
+typedef struct struct_message {
+  int id;
+  int b;
+} struct_message;
+
+struct_message MyData;
+struct_message ShootData;
+struct_message AidLock;
+struct_message LatchData;
+
+int lastButton = -1;
+int lastSwitch = -1;
+
+// ---------------- Send Callback ----------------
+
+void OnDataSent(const wifi_tx_info_t *tx_info, esp_now_send_status_t status)
+{
+  if (status == ESP_NOW_SEND_SUCCESS)
+    Serial.println("Delivery Success");
+  else
+    Serial.println("Delivery Fail");
+}
+
+// ---------------- Receive Callback ----------------
+
+void OnDataRecv(const esp_now_recv_info_t *recv_info, const uint8_t *incomingData, int len)
+{
+
+  memcpy(&MyData, incomingData, sizeof(MyData));
+
+  // Latch status from shoot controller
+  if (MyData.id == 3)
+  {
+    LatchData.b = MyData.b;
+  }
+}
+
+// ---------------- Setup ----------------
+
+void setup() {
+
+  Serial.begin(115200);
+
+  WiFi.mode(WIFI_STA);
+
+  if (esp_now_init() != ESP_OK) {
+
+    Serial.println("ESP-NOW initialization FAILED");
+    return;
+  }
+
+  Serial.println("ESP-NOW initialized");
+
+  esp_now_register_send_cb(OnDataSent);
+  esp_now_register_recv_cb(OnDataRecv);
+
+  // ---------- Add Shoot Peer ----------
+
+  esp_now_peer_info_t peer1 = {};
+
+  memcpy(peer1.peer_addr, ShootAddress, 6);
+  peer1.channel = 0;
+  peer1.encrypt = false;
+
+  if (esp_now_add_peer(&peer1) == ESP_OK)
+    Serial.println("Shoot peer added");
+  else
+    Serial.println("Failed to add Shoot peer");
+
+  // ---------- Add User Peer ----------
+
+  esp_now_peer_info_t peer2 = {};
+
+  memcpy(peer2.peer_addr, UserAddress, 6);
+  peer2.channel = 0;
+  peer2.encrypt = false;
+
+  if (esp_now_add_peer(&peer2) == ESP_OK)
+    Serial.println("User peer added");
+  else
+    Serial.println("Failed to add User peer");
+
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pinMode(SWITCH_PIN, INPUT_PULLUP);
+
+  pixel.begin();
+  pixel.show();
+}
+
+// ---------------- Main Loop ----------------
+
+void loop() {
+
+  int buttonState = digitalRead(BUTTON_PIN);
+  int switchState = digitalRead(SWITCH_PIN);
+
+  // -------- Send Shoot Button --------
+
+  if(buttonState != lastButton)
+  {
+
+    ShootData.id = 1;
+    ShootData.b = buttonState;
+
+    esp_now_send(ShootAddress, (uint8_t*)&ShootData, sizeof(ShootData));
+
+    Serial.print("Shoot button change sent: ");
+    Serial.println(buttonState);
+
+    lastButton = buttonState;
+  }
+
+  // -------- Send Aid Lock Switch --------
+
+  if(switchState != lastSwitch)
+  {
+
+    AidLock.id = 2;
+    AidLock.b = switchState;
+
+    esp_now_send(UserAddress, (uint8_t*)&AidLock, sizeof(AidLock));
+
+    Serial.print("Aid lock change sent: ");
+    Serial.println(switchState);
+
+    lastSwitch = switchState;
+  }
+
+  // -------- LED Status --------
+
+  if (LatchData.b == 0)
+  {
+    pixel.setPixelColor(0, pixel.Color(0,255,0));
+    pixel.show();
+  }
+  else
+  {
+    pixel.setPixelColor(0, pixel.Color(255,0,0));
+    pixel.show();
+  }
+
+  delay(20);
+}
