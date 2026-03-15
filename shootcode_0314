@@ -1,3 +1,8 @@
+wireless button controlled latch shooting
+Matthew Richardson
+
+​
+Christina Iskander​
 #include <esp_now.h>
 
 #include <WiFi.h>
@@ -8,7 +13,9 @@
 
  
 
-#define LATCH_PIN 7
+#define LATCH_PIN 12
+
+#define FIRE_PIN 4
 
  
 
@@ -132,17 +139,15 @@ void reloadMotor()
 
     delayMicroseconds(750);
 
- 
-
     digitalWrite(PUL1, LOW);
 
     digitalWrite(PUL2, LOW);
 
     delayMicroseconds(750);
 
-  }
-
  
+
+  }
 
   for (int i = 0; i < 35; i++)
 
@@ -160,8 +165,6 @@ void reloadMotor()
 
     delayMicroseconds(750);
 
- 
-
     digitalWrite(PUL1, LOW);
 
     digitalWrite(PUL2, LOW);
@@ -169,8 +172,6 @@ void reloadMotor()
     delayMicroseconds(750);
 
   }
-
- 
 
   for (int i = 0; i < 1850; i++)
 
@@ -188,8 +189,6 @@ void reloadMotor()
 
     delayMicroseconds(750);
 
- 
-
     digitalWrite(PUL1, LOW);
 
     digitalWrite(PUL2, LOW);
@@ -198,19 +197,23 @@ void reloadMotor()
 
   }
 
+ 
+
 }
 
  
 
 // ---------------- Setup ----------------
 
- 
-
 void setup()
 
 {
 
+  delay(2000);
+
   Serial.begin(115200);
+
+  ShootData.b = 1;      //start shoot data off to allow panel time to connect
 
  
 
@@ -256,8 +259,6 @@ void setup()
 
   peer1.encrypt = false;
 
- 
-
   if (esp_now_add_peer(&peer1) == ESP_OK)
 
     Serial.println("Aid peer added");
@@ -270,11 +271,7 @@ void setup()
 
   // ---------- Add User Peer ----------
 
- 
-
   esp_now_peer_info_t peer2 = {};
-
- 
 
   memcpy(peer2.peer_addr, UserAddress, 6);
 
@@ -300,23 +297,49 @@ void setup()
 
   pinMode(PUL1, OUTPUT);
 
+ 
+
   pinMode(PUL2, OUTPUT);
 
+ 
+
   pinMode(DIR1, OUTPUT);
+
+ 
 
   pinMode(DIR2, OUTPUT);
 
  
 
+ 
+
+ 
+
   pinMode(LATCH_PIN, INPUT_PULLUP);
+
+  pinMode(FIRE_PIN, OUTPUT);
+
+ 
 
  
 
   digitalWrite(PUL1, LOW);
 
+ 
+
   digitalWrite(PUL2, LOW);
 
+ 
+
+  digitalWrite(FIRE_PIN, LOW);
+
+ 
+
 }
+
+ 
+
+ 
 
  
 
@@ -324,11 +347,21 @@ void setup()
 
  
 
+ 
+
+ 
+
 void loop(){
+
+ 
 
   // Update latch state
 
+ 
+
   LatchData.id = 3;
+
+ 
 
   LatchData.b = digitalRead(LATCH_PIN);
 
@@ -340,24 +373,38 @@ void loop(){
 
   if (ShootData.b == 0 && LatchData.b == 0) //if latch engaged and shot sent
 
+ 
+
   {
 
     Serial.println("SHOT");
+
+    digitalWrite(FIRE_PIN, HIGH);
+
+    delay(500);
+
+    digitalWrite(FIRE_PIN, LOW);
+
+ 
+
+ 
 
  
 
     // reloadMotor();   // enable when ready
 
-  }
-
  
 
-  Serial.print("Shoot command: ");
+  }
 
   Serial.println(ShootData.b);
 
- 
-
   delay(200);   // reduced network spam
 
+ 
+
+ 
+
 }
+
+ 
